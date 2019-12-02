@@ -19,7 +19,7 @@
               <i class="el-icon-plus avatar-uploader-icon"></i>
             </el-upload>
             <div class="block" v-for="(ite, key) in item.imgItem" :key="key">
-              <el-image :src="`http://img.encore.work/${item.name}/${ite.url}`" @click="copy(`http://img.encore.work/${item.name}/${ite.url}`)" style="width: 100px; height: 100px" fit="cover">
+              <el-image :src="ite.url" @click="copy(ite.url)" style="width: 100px; height: 100px" fit="cover">
               </el-image>
               <div class="demonstration">{{ite.size}}</div>
             </div>
