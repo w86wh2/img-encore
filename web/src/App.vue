@@ -15,8 +15,11 @@
               :data="{path: item.name}"
               :show-file-list="false"
               :on-success="handleAvatarSuccess"
+              :on-change="onChange.bind(this, item.name)"
+              :auto-upload="false"
               >
               <i class="el-icon-plus avatar-uploader-icon"></i>
+
             </el-upload>
             <div class="block" v-for="(ite, key) in item.imgItem" :key="key">
               <el-image :src="ite.url" @click="copy(ite.url)" style="width: 100px; height: 100px" fit="cover">
@@ -45,6 +48,49 @@
         <el-button type="primary" @click="submitForm">确 定</el-button>
       </span>
     </el-dialog>
+    <el-dialog
+      title="图片裁切"
+      :visible.sync="dialog1"
+      :append-to-body="true"
+      width="750px"
+    >
+      <div class="vue-cropper_container">
+        <div class="vue-cropper_item">
+          <vueCropper
+            ref="cropper"
+            :img="cropImg"
+            :output-size="option.size"
+            :output-type="option.outputType"
+            :info="true"
+            :full="option.full"
+            :can-move="option.canMove"
+            :can-move-box="option.canMoveBox"
+            :original="option.original"
+            :auto-crop="option.autoCrop"
+            :auto-crop-width="option.autoCropWidth"
+            :auto-crop-height="option.autoCropHeight"
+            :fixed-box="option.fixedBox"
+            :center-box="true"
+            :fixed="option.fixed"
+            :fixed-number="option.fixedNumber"
+            @realTime="realTime"
+          />
+        </div>
+        <div class="vue-cropper_item item">
+          <el-alert
+            title="预览效果"
+            type="success"
+            :closable="false"
+          />
+          <div style="margin-top: 10px" v-html="preImg.html" />
+        </div>
+      </div>
+
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="dialog = false">取 消</el-button>
+        <el-button type="primary" :loading="loading" @click="upLoad">确 定</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -57,6 +103,12 @@ export default {
     return {
         fileList: [],
         dialog: false,
+        dialog1: false,
+        loading: false,
+        cropImg: '',
+        preImg: {},
+        fileName: '',
+        name: '',
         ruleForm: {
           name: '',
           module: ''
@@ -64,13 +116,60 @@ export default {
         rules: {
           name: [  { required: true, message: '请输入模块名称', trigger: 'blur' }],
           module: [ { required: true, message: '请输入文件夹名称', trigger: 'blur' }]
-        }
+        },
+        option: {
+        img: '', // 裁剪图片的地址  (默认：空)
+        size: 1, // 裁剪生成图片的质量  (默认:1)
+        full: true, // 是否输出原图比例的截图 选true生成的图片会非常大  (默认:false)
+        outputType: 'png', // 裁剪生成图片的格式  (默认:jpg)
+        canMove: true, // 上传图片是否可以移动  (默认:true)
+        original: false, // 上传图片按照原始比例渲染  (默认:false)
+        canMoveBox: true, // 截图框能否拖动  (默认:true)
+        autoCrop: true, // 是否默认生成截图框  (默认:false)
+        // autoCropWidth: 300, // 默认生成截图框宽度  (默认:80%)
+        // autoCropHeight: 300, // 默认生成截图框高度  (默认:80%)
+        fixedBox: false, // 固定截图框大小 不允许改变  (默认:false)
+        fixed: false, // 是否开启截图框宽高固定比例  (默认:true)
+        fixedNumber: [1, 1] // 截图框比例  (默认:[1:1])
+      }
     }
   },
   mounted() {
     this.getList()
   },
   methods: {
+    realTime(data) {
+      // eslint-disable-next-line no-return-assign
+      this.preImg = data
+    },
+    onChange(name, file) {
+      this.fileName = file.name
+      this.name = name
+      this.cropImg = URL.createObjectURL(file.raw)
+      this.dialog1 = true
+    },
+    upLoad() {
+      this.loading = true
+      this.$refs.cropper.getCropBlob((data) => {
+        // const img = window.URL.createObjectURL(data)
+        const formData = new FormData()
+        formData.append('file', data, this.fileName)
+        formData.append('path', this.name)
+        const config = {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        }
+        axios.post('/api/upload', formData, config).then(res => {
+          this.getList()
+          this.$message.success(res.data)
+          this.loading = false
+          this.dialog1 = false
+        }).catch(err => {
+          // eslint-disable-next-line no-console
+          console.log(err)
+          this.loading1 = false
+        })
+      })
+    },
     copyText(text, callback){ // text: 要复制的内容， callback: 回调
         var tag = document.createElement('input');
         tag.setAttribute('id', 'cp_hgz_input');
@@ -139,6 +238,18 @@ export default {
 }
 .el-card__body {
     padding: 2px !important;
+}
+.vue-cropper_container {
+  width: 610px;
+  display: flex;
+  height: 320px;
+}
+.vue-cropper_item {
+  width: 300px !important;
+
+}
+.vue-cropper_item.item {
+  padding: 10px;
 }
 .img_container {
   display: flex;
